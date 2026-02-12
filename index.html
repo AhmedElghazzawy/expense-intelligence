@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Intelligence</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -13,87 +14,12 @@
             <div class="logo">
                 <span class="logo-icon">EI</span> EXP.INTEL
             </div>
-            
             <ul class="menu">
-                <li class="active">
-                    <span class="icon">📊</span> Dashboard
-                </li>
-                <li>
-                    <span class="icon">📈</span> Analytics
-                </li>
-                <li>
-                    <span class="icon">📜</span> History
-                </li>
-                <li>
-                    <span class="icon">⚙️</span> Settings
-                </li>
+                <li class="active"><span class="icon">📊</span> Dashboard</li>
+                <li><span class="icon">📈</span> Analytics</li>
+                <li><span class="icon">📜</span> History</li>
+                <li><span class="icon">⚙️</span> Settings</li>
             </ul>
-
-            <div class="user-profile">
-                <div class="avatar">AE</div>
-                <div class="user-info">
-                    <span class="name">Ahmed Elghazzawy</span>
-                    <span class="role">Pro Member</span>
-                </div>
-            </div>
-        </nav>
-
-        <main class="main-content">
-            <header>
-                <h1>Dashboard</h1>
-                <p class="subtitle">Welcome back, Ahmed</p>
-            </header>
-            
-            <div class="stats-row">
-                <div class="card">
-                    <h3>Total Income</h3>
-                    <div class="amount" id="total-income">$0.00</div>
-                </div>
-                <div class="card">
-                    <h3>Total Expenses</h3>
-                    <div class="amount" id="total-expense">$0.00</div>
-                </div>
-                <div class="card">
-                    <h3>Net Balance</h3>
-                    <div class="amount" id="net-balance">$0.00</div>
-                </div>
-            </div>
-            <div class="add-transaction-container">
-                <h2>Add New Transaction</h2>
-                <form id="form">
-                    <div class="form-control">
-                        <label for="text">Description</label>
-                        <input type="text" id="text" placeholder="e.g. <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Intelligence</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-    <div class="container">
-        <nav class="sidebar">
-            <div class="logo">
-                <span class="logo-icon">EI</span> EXP.INTEL
-            </div>
-            
-            <ul class="menu">
-                <li class="active">
-                    <span class="icon">📊</span> Dashboard
-                </li>
-                <li>
-                    <span class="icon">📈</span> Analytics
-                </li>
-                <li>
-                    <span class="icon">📜</span> History
-                </li>
-                <li>
-                    <span class="icon">⚙️</span> Settings
-                </li>
-            </ul>
-
             <div class="user-profile">
                 <div class="avatar">AE</div>
                 <div class="user-info">
@@ -129,47 +55,43 @@
                 <form id="form">
                     <div class="form-group">
                         <label for="text">Description</label>
-                        <input type="text" id="text" placeholder="e.g. Freelance Client, Groceries..." />
+                        <input type="text" id="text" placeholder="e.g. Freelance Client, Lunch..." />
                     </div>
+                    
                     <div class="form-group">
-                        <label for="amount">Amount <small>(negative for expense, positive for income)</small></label>
-                        <input type="number" id="amount" placeholder="e.g. -200 or 1500" />
+                        <label for="category">Category</label>
+                        <select id="category">
+                            <option value="General">General</option>
+                            <option value="Food">Food & Dining</option>
+                            <option value="Transport">Transport</option>
+                            <option value="Utilities">Bills & Utilities</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Income">Income (Salary/Freelance)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <input type="number" id="amount" placeholder="e.g. 50 or 5000" min="0" step="0.01" />
                     </div>
                     <button class="btn-primary">Add Transaction</button>
                 </form>
+            </div>
+
+            <div class="charts-container" style="background: white; padding: 2rem; border-radius: 16px; box-shadow: var(--card-shadow); border: 1px solid #e2e8f0; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem;">Expense Breakdown</h2>
+                
+                <div style="height: 300px; display: flex; justify-content: center;">
+                    <canvas id="expenseChart"></canvas>
+                </div>
             </div>
 
             <div class="recent-transactions">
                 <div class="section-header">
                     <h2>Recent History</h2>
                 </div>
-                
-                <div class="transaction-list" id="transaction-list">
-                    </div>
-            </div>
-        </main>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>Salary, Rent, Coffee..." />
-                    </div>
-                    <div class="form-control">
-                        <label for="amount">Amount <br> (negative - expense, positive + income)</label>
-                        <input type="number" id="amount" placeholder="e.g. -200 or 5000" />
-                    </div>
-                    <button class="btn-primary" style="width: 100%; margin-top: 10px;">Add Transaction</button>
-                </form>
-            </div>
-
-            <div class="recent-transactions">
-                <div class="section-header">
-                    <h2>Recent Transactions</h2>
-                    <button class="btn-primary" onclick="alert('Add Transaction feature coming soon!')">+ Add New</button>
-                </div>
-                
-                <div class="transaction-list" id="transaction-list">
-                    </div>
+                <div class="transaction-list" id="transaction-list"></div>
             </div>
         </main>
     </div>
