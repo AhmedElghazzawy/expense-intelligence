@@ -4,14 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ONYX | Financial Intelligence</title>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%236366F1;stop-opacity:1' /><stop offset='100%' style='stop-color:%238B5CF6;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='%2309090b' /><path d='M50 20 L80 50 L50 80 L20 50 Z' fill='url(%23grad)' /></svg>">
+    
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%236366F1;stop-opacity:1' /><stop offset='100%' style='stop-color:%238B5CF6;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='%2309090b' /><path d='M50 20 L80 50 L50 80 L20 50 Z' fill='url(%23grad)' /></svg>">
 </head>
 <body>
     <div class="app-wrapper">
+        
+        <header class="mobile-header">
+            <div class="brand-mobile">
+                <i class="ph-fill ph-diamond" style="color: #6366F1;"></i>
+                <span>ONYX</span>
+            </div>
+            <button id="mobile-theme-toggle" class="icon-btn">
+                <i class="ph-fill ph-moon"></i>
+            </button>
+        </header>
+
         <aside class="sidebar">
             <div class="brand">
                 <div class="brand-logo"><i class="ph-fill ph-diamond"></i></div>
@@ -25,13 +39,10 @@
             </nav>
 
             <div class="sidebar-bottom">
-                <button id="theme-toggle" class="theme-btn">
-                    <div class="theme-icon-box">
-                        <i class="ph-fill ph-moon" id="theme-icon"></i>
-                    </div>
+                <button id="desktop-theme-toggle" class="theme-btn">
+                    <div class="theme-icon-box"><i class="ph-fill ph-moon"></i></div>
                     <span id="theme-text">Dark Mode</span>
                 </button>
-
                 <div class="profile-card">
                     <div class="profile-img">AE</div>
                     <div class="profile-info">
@@ -43,7 +54,7 @@
         </aside>
 
         <main class="main-view">
-            <header class="header">
+            <header class="desktop-header">
                 <div>
                     <h1>Dashboard</h1>
                     <p class="date-display" id="current-date">October 24</p>
@@ -86,6 +97,7 @@
                                 <i class="ph-light ph-caret-down"></i>
                             </div>
                             <input type="hidden" id="category" value="">
+                            
                             <div class="custom-options hidden" id="custom-options">
                                 <div class="option" data-value="General"><i class="ph-light ph-tag"></i> General</div>
                                 <div class="option" data-value="Food"><i class="ph-light ph-hamburger"></i> Food & Dining</div>
@@ -107,13 +119,19 @@
             </section>
 
             <section class="panel list-panel">
-                <div class="panel-header">
-                    <h3>Recent Transactions</h3>
-                </div>
+                <div class="panel-header"><h3>Recent Transactions</h3></div>
                 <div id="transaction-list" class="transaction-list">
                     </div>
             </section>
         </main>
+
+        <nav class="mobile-nav">
+            <a href="#" class="nav-icon active"><i class="ph-fill ph-squares-four"></i></a>
+            <a href="#" class="nav-icon"><i class="ph-light ph-chart-pie-slice"></i></a>
+            <a href="#" class="nav-icon"><i class="ph-light ph-wallet"></i></a>
+            <a href="#" class="nav-icon"><i class="ph-light ph-user"></i></a>
+        </nav>
+
     </div>
 
     <div id="modal-overlay" class="modal-overlay hidden">

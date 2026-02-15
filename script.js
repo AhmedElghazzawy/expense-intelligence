@@ -1,10 +1,13 @@
 // ==========================================
-// 1. CONFIGURATION & STATE
+// 1. CONFIGURATION
 // ==========================================
+// YOUR LIVE RENDER URL
 const API_URL = 'https://expense-intelligence.onrender.com/transactions';
+
+// State Variables
 let transactions = [];
 let myChart = null;
-let transactionToDelete = null; // Stores ID while modal is open
+let transactionToDelete = null;
 
 // ==========================================
 // 2. DOM ELEMENTS
@@ -12,89 +15,85 @@ let transactionToDelete = null; // Stores ID while modal is open
 const form = document.getElementById('form');
 const textInput = document.getElementById('text');
 const amountInput = document.getElementById('amount');
-const categoryInput = document.getElementById('category'); // Hidden input
+const categoryInput = document.getElementById('category');
 
-// Theme Elements
-const themeBtn = document.getElementById('theme-toggle');
-const themeIcon = document.getElementById('theme-icon');
-const themeText = document.getElementById('theme-text');
-const html = document.documentElement;
-
-// Custom Dropdown Elements
+// Custom Dropdown
 const dropdownTrigger = document.getElementById('category-trigger');
 const dropdownText = document.getElementById('selected-category-text');
 const dropdownMenu = document.getElementById('custom-options');
 const dropdownOptions = document.querySelectorAll('.option');
 
-// Modal Elements
+// Modal
 const modal = document.getElementById('modal-overlay');
 const confirmBtn = document.getElementById('confirm-delete-btn');
 
+// Theme Toggles
+const desktopThemeBtn = document.getElementById('desktop-theme-toggle');
+const mobileThemeBtn = document.getElementById('mobile-theme-toggle');
+const html = document.documentElement;
+
 // ==========================================
-// 3. THEME LOGIC (Luxury Mode)
+// 3. THEME LOGIC (Desktop & Mobile)
 // ==========================================
 
-// Function to update the button UI (Icon & Text)
+function toggleTheme() {
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeUI(next);
+}
+
 function updateThemeUI(theme) {
-    if (theme === 'dark') {
-        themeIcon.className = 'ph-fill ph-moon';
-        themeText.innerText = 'Dark Mode';
-    } else {
-        themeIcon.className = 'ph-fill ph-sun';
-        themeText.innerText = 'Light Mode';
+    const iconClass = theme === 'dark' ? 'ph-fill ph-moon' : 'ph-fill ph-sun';
+    
+    // Update Desktop Sidebar
+    if(document.getElementById('theme-text')) {
+        document.getElementById('theme-text').innerText = theme === 'dark' ? 'Dark Mode' : 'Light Mode';
+        document.querySelector('#desktop-theme-toggle i').className = iconClass;
+    }
+
+    // Update Mobile Header
+    if(mobileThemeBtn) {
+        mobileThemeBtn.querySelector('i').className = iconClass;
     }
 }
 
-// Load Saved Theme (Default to Dark)
+// Initialize Theme
 const savedTheme = localStorage.getItem('theme') || 'dark';
 html.setAttribute('data-theme', savedTheme);
-if (themeBtn) updateThemeUI(savedTheme);
+updateThemeUI(savedTheme);
 
-// Toggle Theme on Click
-if (themeBtn) {
-    themeBtn.addEventListener('click', () => {
-        const current = html.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        
-        html.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateThemeUI(next);
-    });
-}
+// Event Listeners
+if (desktopThemeBtn) desktopThemeBtn.addEventListener('click', toggleTheme);
+if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', toggleTheme);
 
-// Set Current Date
+// Set Date
 const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
 document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', dateOptions);
 
 // ==========================================
-// 4. CUSTOM DROPDOWN INTERACTION
+// 4. CUSTOM DROPDOWN LOGIC
 // ==========================================
 
-// Toggle Menu
 dropdownTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
     dropdownMenu.classList.toggle('hidden');
 });
 
-// Handle Option Selection
 dropdownOptions.forEach(option => {
     option.addEventListener('click', () => {
         const value = option.getAttribute('data-value');
-        const htmlContent = option.innerHTML; // Get text + icon
+        const htmlContent = option.innerHTML;
 
-        // Update UI
         dropdownText.innerHTML = htmlContent;
-        dropdownText.style.color = "var(--text-primary)"; // Make text bright
-        
-        // Update Hidden Input (For Logic)
+        dropdownText.style.color = "var(--text-primary)";
         categoryInput.value = value;
-        
-        // Close Menu
         dropdownMenu.classList.add('hidden');
     });
 });
 
-// Close when clicking outside
 document.addEventListener('click', (e) => {
     if (!dropdownTrigger.contains(e.target) && !dropdownMenu.contains(e.target)) {
         dropdownMenu.classList.add('hidden');
@@ -102,7 +101,7 @@ document.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// 5. CUSTOM MODAL LOGIC
+// 5. MODAL LOGIC
 // ==========================================
 
 function showModal(id) {
@@ -115,7 +114,6 @@ function closeModal() {
     modal.classList.add('hidden');
 }
 
-// Confirm Delete
 confirmBtn.addEventListener('click', async () => {
     if (transactionToDelete) {
         await deleteTransaction(transactionToDelete);
@@ -123,7 +121,6 @@ confirmBtn.addEventListener('click', async () => {
     }
 });
 
-// Close on Overlay Click
 modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
 });
@@ -132,7 +129,6 @@ modal.addEventListener('click', (e) => {
 // 6. API OPERATIONS
 // ==========================================
 
-// GET Data
 async function getData() {
     try {
         const res = await fetch(API_URL);
@@ -144,25 +140,19 @@ async function getData() {
     }
 }
 
-// POST Data
 async function addTransaction(e) {
     e.preventDefault();
-
     const text = textInput.value;
     const amountVal = amountInput.value;
     const categoryVal = categoryInput.value;
 
     if (text.trim() === '' || amountVal.trim() === '' || categoryVal === '') {
-        // Simple shake animation or alert could go here
         alert("Please fill in all fields"); 
         return;
     }
 
-    // Smart Sign Logic
     let finalAmount = Math.abs(Number(amountVal));
-    if (categoryVal !== 'Income') {
-        finalAmount = finalAmount * -1;
-    }
+    if (categoryVal !== 'Income') finalAmount = finalAmount * -1;
 
     const newTx = {
         text: text,
@@ -179,31 +169,24 @@ async function addTransaction(e) {
         });
 
         if (res.ok) {
-            const savedTransaction = await res.json();
-            transactions.push(savedTransaction);
+            const saved = await res.json();
+            transactions.push(saved);
             updateUI();
-            
-            // Reset Form
             textInput.value = '';
             amountInput.value = '';
             categoryInput.value = '';
             dropdownText.innerText = 'Select Category';
             dropdownText.style.color = "var(--text-secondary)";
         }
-    } catch (err) {
-        console.error("Error adding transaction:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
-// DELETE Data
 async function deleteTransaction(id) {
     try {
         await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
         transactions = transactions.filter(t => t.id !== id);
         updateUI();
-    } catch (err) {
-        console.error("Error deleting transaction:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 // ==========================================
@@ -211,7 +194,6 @@ async function deleteTransaction(id) {
 // ==========================================
 
 function updateUI() {
-    // 1. Update Totals
     const amounts = transactions.map(t => t.amount);
     const total = amounts.reduce((acc, item) => (acc += item), 0);
     const income = amounts.filter(item => item > 0).reduce((acc, item) => (acc += item), 0);
@@ -221,19 +203,15 @@ function updateUI() {
     document.getElementById('total-income').innerText = formatMoney(income, true);
     document.getElementById('total-expense').innerText = formatMoney(Math.abs(expense), true);
 
-    // 2. Render List
     const list = document.getElementById('transaction-list');
     list.innerHTML = '';
 
-    // Show last 6 items
-    transactions.slice().reverse().slice(0, 6).forEach(t => {
+    transactions.slice().reverse().slice(0, 10).forEach(t => {
         const el = document.createElement('div');
         el.className = 't-item';
         el.innerHTML = `
             <div class="t-left">
-                <div class="t-icon">
-                    <i class="ph-light ${getIcon(t.category)}"></i>
-                </div>
+                <div class="t-icon"><i class="ph-light ${getIcon(t.category)}"></i></div>
                 <div class="t-info">
                     <h4>${t.text}</h4>
                     <p>${t.category} • ${t.date}</p>
@@ -243,46 +221,30 @@ function updateUI() {
                 <span class="t-amount ${t.amount > 0 ? 'positive' : ''}">
                     ${t.amount > 0 ? '+' : ''}${formatMoney(Math.abs(t.amount))}
                 </span>
-                <button class="delete-btn" onclick="showModal(${t.id})">
-                    <i class="ph-fill ph-trash"></i>
-                </button>
+                <button class="delete-btn" onclick="showModal(${t.id})"><i class="ph-fill ph-trash"></i></button>
             </div>
         `;
         list.appendChild(el);
     });
-
     renderChart();
 }
 
-// Helper: Format Money
 function formatMoney(num, sign = false) {
     return (sign ? (num < 0 ? '-' : '+') : '') + '$' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 }
 
-// Helper: Get Icon
 function getIcon(cat) {
     const map = {
-        'Food': 'ph-hamburger',
-        'Transport': 'ph-car',
-        'Shopping': 'ph-bag',
-        'Entertainment': 'ph-game-controller',
-        'Health': 'ph-heartbeat',
-        'Utilities': 'ph-lightning',
-        'Income': 'ph-money',
-        'General': 'ph-tag'
+        'Food': 'ph-hamburger', 'Transport': 'ph-car', 'Shopping': 'ph-bag',
+        'Entertainment': 'ph-game-controller', 'Health': 'ph-heartbeat',
+        'Utilities': 'ph-lightning', 'Income': 'ph-money', 'General': 'ph-tag'
     };
     return map[cat] || 'ph-tag';
 }
 
-// ==========================================
-// 8. CHART.JS
-// ==========================================
-
 function renderChart() {
     const ctx = document.getElementById('expenseChart').getContext('2d');
     const expenses = transactions.filter(t => t.amount < 0);
-    
-    // Group by Category
     const categories = {};
     expenses.forEach(t => {
         const cat = t.category;
@@ -291,7 +253,6 @@ function renderChart() {
 
     if (myChart) myChart.destroy();
 
-    // Check Theme for Chart Colors
     const isDark = html.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#A1A1AA' : '#64748B';
 
@@ -307,27 +268,15 @@ function renderChart() {
             }]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: {
-                legend: { 
-                    position: 'right', 
-                    labels: { 
-                        color: textColor, 
-                        font: { family: 'Outfit', size: 11 }, 
-                        boxWidth: 10,
-                        padding: 15
-                    } 
-                }
+                legend: { position: 'right', labels: { color: textColor, font: { family: 'Outfit', size: 11 }, boxWidth: 10, padding: 15 } }
             },
-            cutout: '75%', 
-            animation: { animateScale: true, animateRotate: true }
+            cutout: '75%', animation: { animateScale: true, animateRotate: true }
         }
     });
 }
 
-// ==========================================
-// 9. INIT
-// ==========================================
+// Start
 form.addEventListener('submit', addTransaction);
 getData();
