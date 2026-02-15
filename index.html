@@ -1,99 +1,131 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Intelligence</title>
+    <title>ONYX | Financial Intelligence</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><defs><linearGradient id='grad' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' style='stop-color:%236366F1;stop-opacity:1' /><stop offset='100%' style='stop-color:%238B5CF6;stop-opacity:1' /></linearGradient></defs><rect width='100' height='100' rx='20' fill='%2309090b' /><path d='M50 20 L80 50 L50 80 L20 50 Z' fill='url(%23grad)' /></svg>">
 </head>
 <body>
-    <div class="container">
-        <nav class="sidebar">
-            <div class="logo">
-                <span class="logo-icon">EI</span> EXP.INTEL
+    <div class="app-wrapper">
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-logo"><i class="ph-fill ph-diamond"></i></div>
+                <span class="brand-name">ONYX</span>
             </div>
-            <ul class="menu">
-                <li class="active"><span class="icon">📊</span> Dashboard</li>
-                <li><span class="icon">📈</span> Analytics</li>
-                <li><span class="icon">📜</span> History</li>
-                <li><span class="icon">⚙️</span> Settings</li>
-            </ul>
-            <div class="user-profile">
-                <div class="avatar">AE</div>
-                <div class="user-info">
-                    <span class="name">Ahmed Elghazzawy</span>
-                    <span class="role">Pro Member</span>
+            
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active"><i class="ph-light ph-squares-four"></i><span>Overview</span></a>
+                <a href="#" class="nav-item"><i class="ph-light ph-chart-pie-slice"></i><span>Analytics</span></a>
+                <a href="#" class="nav-item"><i class="ph-light ph-wallet"></i><span>Wallet</span></a>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <button id="theme-toggle" class="theme-btn">
+                    <div class="theme-icon-box">
+                        <i class="ph-fill ph-moon" id="theme-icon"></i>
+                    </div>
+                    <span id="theme-text">Dark Mode</span>
+                </button>
+
+                <div class="profile-card">
+                    <div class="profile-img">AE</div>
+                    <div class="profile-info">
+                        <span class="name">Ahmed E.</span>
+                        <span class="status">Premium</span>
+                    </div>
                 </div>
             </div>
-        </nav>
+        </aside>
 
-        <main class="main-content">
-            <header>
-                <h1>Dashboard</h1>
-                <p class="subtitle">Welcome back, Ahmed</p>
+        <main class="main-view">
+            <header class="header">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p class="date-display" id="current-date">October 24</p>
+                </div>
             </header>
             
-            <div class="stats-row">
-                <div class="card">
-                    <h3>Total Income</h3>
-                    <div class="amount positive" id="total-income">$0.00</div>
+            <section class="stats-deck">
+                <div class="stat-card">
+                    <span class="stat-label">Total Balance</span>
+                    <h2 class="stat-value" id="net-balance">$0.00</h2>
                 </div>
-                <div class="card">
-                    <h3>Total Expenses</h3>
-                    <div class="amount negative" id="total-expense">$0.00</div>
+                <div class="stat-card">
+                    <span class="stat-label">Income</span>
+                    <h2 class="stat-value income-text" id="total-income">$0.00</h2>
                 </div>
-                <div class="card">
-                    <h3>Net Balance</h3>
-                    <div class="amount" id="net-balance">$0.00</div>
+                <div class="stat-card">
+                    <span class="stat-label">Expenses</span>
+                    <h2 class="stat-value expense-text" id="total-expense">$0.00</h2>
                 </div>
-            </div>
+            </section>
 
-            <div class="add-transaction-container">
-                <h2>Add New Transaction</h2>
-                <form id="form">
-                    <div class="form-group">
-                        <label for="text">Description</label>
-                        <input type="text" id="text" placeholder="e.g. Freelance Client, Lunch..." />
+            <section class="grid-layout">
+                <div class="panel chart-panel">
+                    <div class="panel-header"><h3>Cash Flow</h3></div>
+                    <div class="chart-container">
+                        <canvas id="expenseChart"></canvas>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="category">Category</label>
-                        <select id="category">
-                            <option value="General">General</option>
-                            <option value="Food">Food & Dining</option>
-                            <option value="Transport">Transport</option>
-                            <option value="Utilities">Bills & Utilities</option>
-                            <option value="Entertainment">Entertainment</option>
-                            <option value="Shopping">Shopping</option>
-                            <option value="Income">Income (Salary/Freelance)</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="amount">Amount</label>
-                        <input type="number" id="amount" placeholder="e.g. 50 or 5000" min="0" step="0.01" />
-                    </div>
-                    <button class="btn-primary">Add Transaction</button>
-                </form>
-            </div>
-
-            <div class="charts-container" style="background: white; padding: 2rem; border-radius: 16px; box-shadow: var(--card-shadow); border: 1px solid #e2e8f0; margin-bottom: 2rem;">
-                <h2 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 1.5rem;">Expense Breakdown</h2>
-                
-                <div style="height: 300px; display: flex; justify-content: center;">
-                    <canvas id="expenseChart"></canvas>
                 </div>
-            </div>
 
-            <div class="recent-transactions">
-                <div class="section-header">
-                    <h2>Recent History</h2>
+                <div class="panel form-panel">
+                    <div class="panel-header"><h3>Quick Add</h3></div>
+                    <form id="form">
+                        <div class="input-group">
+                            <input type="text" id="text" placeholder="Description" autocomplete="off">
+                        </div>
+
+                        <div class="input-group relative">
+                            <div class="custom-select-trigger" id="category-trigger">
+                                <span id="selected-category-text">Select Category</span>
+                                <i class="ph-light ph-caret-down"></i>
+                            </div>
+                            <input type="hidden" id="category" value="">
+                            <div class="custom-options hidden" id="custom-options">
+                                <div class="option" data-value="General"><i class="ph-light ph-tag"></i> General</div>
+                                <div class="option" data-value="Food"><i class="ph-light ph-hamburger"></i> Food & Dining</div>
+                                <div class="option" data-value="Transport"><i class="ph-light ph-car"></i> Transport</div>
+                                <div class="option" data-value="Shopping"><i class="ph-light ph-bag"></i> Shopping</div>
+                                <div class="option" data-value="Entertainment"><i class="ph-light ph-game-controller"></i> Entertainment</div>
+                                <div class="option" data-value="Health"><i class="ph-light ph-heartbeat"></i> Health</div>
+                                <div class="option income-option" data-value="Income"><i class="ph-light ph-money"></i> Income</div>
+                            </div>
+                        </div>
+
+                        <div class="input-group">
+                            <input type="number" id="amount" placeholder="Amount (0.00)" min="0" step="0.01">
+                        </div>
+
+                        <button class="submit-btn"><i class="ph-fill ph-plus"></i> Add Entry</button>
+                    </form>
                 </div>
-                <div class="transaction-list" id="transaction-list"></div>
-            </div>
+            </section>
+
+            <section class="panel list-panel">
+                <div class="panel-header">
+                    <h3>Recent Transactions</h3>
+                </div>
+                <div id="transaction-list" class="transaction-list">
+                    </div>
+            </section>
         </main>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-card">
+            <div class="modal-icon"><i class="ph-fill ph-trash"></i></div>
+            <h3>Delete Entry?</h3>
+            <p>This will permanently remove this transaction.</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button class="btn-confirm" id="confirm-delete-btn">Delete</button>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>
