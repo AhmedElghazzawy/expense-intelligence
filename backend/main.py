@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends, status
@@ -5,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select
 
 # ==========================================
-# 1. DATABASE MODELS & CONFIG
+# 1. PROFESSIONAL DATABASE CONFIG
 # ==========================================
 
 class Transaction(SQLModel, table=True):
@@ -15,78 +16,72 @@ class Transaction(SQLModel, table=True):
     date: str
     category: str
 
-# Database Connection (SQLite for now, ready for PostgreSQL)
-sqlite_file_name = "expenses.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
+# SMART CONNECTION:
+# If we are on Render (Cloud), use the 'DATABASE_URL' environment variable.
+# If we are on Laptop (Local), use 'expenses.db'.
+database_url = os.environ.get("DATABASE_URL", "sqlite:///expenses.db")
 
-# check_same_thread=False is needed only for SQLite
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
+# Fix for Postgres URL format on Render (it starts with postgres:// but SQLAlchemy needs postgresql://)
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+connect_args = {"check_same_thread": False} if "sqlite" in database_url else {}
+engine = create_engine(database_url, connect_args=connect_args)
 
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
 # ==========================================
-# 2. LIFESPAN MANAGER (The Modern Way)
+# 2. LIFESPAN (Startup Logic)
 # ==========================================
-# This replaces the old @app.on_event("startup")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load the DB when app starts
     create_db_and_tables()
     yield
-    # Clean up when app stops (if needed later)
 
 # ==========================================
 # 3. APP SETUP
 # ==========================================
 app = FastAPI(
     title="ONYX API",
-    version="2.0.0",
+    version="2.1.0",
     lifespan=lifespan
 )
 
-# CORS: Allow Vercel & Localhost to talk to us
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # In production, replace "*" with your Vercel URL
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==========================================
-# 4. DEPENDENCIES
-# ==========================================
-# This ensures every request gets a fresh DB session and closes it after
 def get_session():
     with Session(engine) as session:
         yield session
 
 # ==========================================
-# 5. API ENDPOINTS
+# 4. ENDPOINTS
 # ==========================================
 
-@app.get("/")
-def read_root():
-    return {"status": "active", "service": "ONYX Financial Intelligence"}
+# FIX FOR "NOT FOUND": Now we have a homepage!
+@app.get("/", status_code=status.HTTP_200_OK)
+def root():
+    return {
+        "system": "ONYX Financial Intelligence",
+        "status": "operational",
+        "database": "connected"
+    }
 
-@app.get("/transactions", response_model=List[Transaction], status_code=status.HTTP_200_OK)
+@app.get("/transactions", response_model=List[Transaction])
 def get_transactions(session: Session = Depends(get_session)):
-    """
-    Fetch all transactions, sorted by ID (Newest First).
-    Sorting in SQL is faster than sorting in JavaScript.
-    """
-    # SQL: SELECT * FROM transaction ORDER BY id DESC;
+    # Sort by ID descending (Newest on top)
     statement = select(Transaction).order_by(Transaction.id.desc())
     transactions = session.exec(statement).all()
     return transactions
 
 @app.post("/transactions", response_model=Transaction, status_code=status.HTTP_201_CREATED)
 def add_transaction(transaction: Transaction, session: Session = Depends(get_session)):
-    """
-    Add a new transaction to the ledger.
-    """
     try:
         session.add(transaction)
         session.commit()
@@ -94,17 +89,13 @@ def add_transaction(transaction: Transaction, session: Session = Depends(get_ses
         return transaction
     except Exception as e:
         session.rollback()
-        raise HTTPException(status_code=500, detail="Database Error")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_transaction(transaction_id: int, session: Session = Depends(get_session)):
-    """
-    Remove a transaction. Returns 204 No Content on success.
-    """
     transaction = session.get(Transaction, transaction_id)
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
     session.delete(transaction)
     session.commit()
-    return None # 204 means "Done, nothing to show"
+    return None
