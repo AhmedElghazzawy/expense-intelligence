@@ -4,9 +4,10 @@ from typing import Optional, List
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import SQLModel, Field, create_engine, Session, select
+from pydantic import BaseModel
 
 # ==========================================
-# 1. PROFESSIONAL DATABASE CONFIG
+# 1. DATABASE CONFIG
 # ==========================================
 
 class Transaction(SQLModel, table=True):
@@ -16,12 +17,11 @@ class Transaction(SQLModel, table=True):
     date: str
     category: str
 
-# SMART CONNECTION:
-# If we are on Render (Cloud), use the 'DATABASE_URL' environment variable.
-# If we are on Laptop (Local), use 'expenses.db'.
-database_url = os.environ.get("DATABASE_URL", "sqlite:///expenses.db")
+# Model for the Prediction Request
+class PredictionRequest(BaseModel):
+    text: str
 
-# Fix for Postgres URL format on Render (it starts with postgres:// but SQLAlchemy needs postgresql://)
+database_url = os.environ.get("DATABASE_URL", "sqlite:///expenses.db")
 if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
@@ -31,22 +31,38 @@ engine = create_engine(database_url, connect_args=connect_args)
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
-# ==========================================
-# 2. LIFESPAN (Startup Logic)
-# ==========================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
     yield
 
 # ==========================================
+# 2. THE AI BRAIN (Keyword Engine)
+# ==========================================
+def predict_category(text: str) -> str:
+    text = text.lower()
+    
+    keywords = {
+        "Food": ["mcdonalds", "kfc", "burger", "starbucks", "coffee", "pizza", "restaurant", "lunch", "dinner", "groceries", "market", "bread", "cafe", "bistro", "sushi", "taco", "steak", "grill", "bar", "pub", "wine", "beer", "drink"],
+        "Transport": ["uber", "lyft", "taxi", "bus", "train", "metro", "gas", "fuel", "petrol", "parking", "shell", "bp", "tesla", "flight", "airline", "ticket", "subway", "scooter", "bike"],
+        "Shopping": ["amazon", "ebay", "walmart", "target", "apple", "nike", "zara", "clothes", "shoes", "mall", "store", "shop", "gift", "book", "electronics"],
+        "Entertainment": ["netflix", "spotify", "hbo", "cinema", "movie", "game", "steam", "playstation", "xbox", "concert", "show", "ticket", "fun", "bowling", "party"],
+        "Health": ["pharmacy", "doctor", "dentist", "hospital", "gym", "fitness", "yoga", "medication", "drug", "clinic", "health", "insurance"],
+        "Utilities": ["bill", "water", "electric", "power", "internet", "wifi", "phone", "mobile", "verizon", "att", "t-mobile", "rent", "subscription"],
+        "Income": ["salary", "paycheck", "freelance", "upwork", "fiverr", "deposit", "transfer", "refund", "bonus"]
+    }
+    
+    for category, words in keywords.items():
+        for word in words:
+            if word in text:
+                return category
+    
+    return "General" # Default if no match found
+
+# ==========================================
 # 3. APP SETUP
 # ==========================================
-app = FastAPI(
-    title="ONYX API",
-    version="2.1.0",
-    lifespan=lifespan
-)
+app = FastAPI(title="ONYX API", version="2.2.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -64,21 +80,20 @@ def get_session():
 # 4. ENDPOINTS
 # ==========================================
 
-# FIX FOR "NOT FOUND": Now we have a homepage!
 @app.get("/", status_code=status.HTTP_200_OK)
 def root():
-    return {
-        "system": "ONYX Financial Intelligence",
-        "status": "operational",
-        "database": "connected"
-    }
+    return {"system": "ONYX Financial Intelligence", "status": "operational", "ai": "active"}
+
+# NEW: The Prediction Endpoint
+@app.post("/predict")
+def predict(request: PredictionRequest):
+    category = predict_category(request.text)
+    return {"category": category}
 
 @app.get("/transactions", response_model=List[Transaction])
 def get_transactions(session: Session = Depends(get_session)):
-    # Sort by ID descending (Newest on top)
     statement = select(Transaction).order_by(Transaction.id.desc())
-    transactions = session.exec(statement).all()
-    return transactions
+    return session.exec(statement).all()
 
 @app.post("/transactions", response_model=Transaction, status_code=status.HTTP_201_CREATED)
 def add_transaction(transaction: Transaction, session: Session = Depends(get_session)):
@@ -87,9 +102,9 @@ def add_transaction(transaction: Transaction, session: Session = Depends(get_ses
         session.commit()
         session.refresh(transaction)
         return transaction
-    except Exception as e:
+    except Exception:
         session.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Database Error")
 
 @app.delete("/transactions/{transaction_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_transaction(transaction_id: int, session: Session = Depends(get_session)):

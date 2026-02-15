@@ -1,13 +1,11 @@
 // ==========================================
 // 1. CONFIGURATION
 // ==========================================
-// YOUR LIVE RENDER URL
-const API_URL = 'https://expense-intelligence.onrender.com/transactions';
-
-// State Variables
+const API_URL = 'https://expense-intelligence.onrender.com'; // Base URL
 let transactions = [];
 let myChart = null;
 let transactionToDelete = null;
+let debounceTimer; // Timer for AI prediction
 
 // ==========================================
 // 2. DOM ELEMENTS
@@ -23,23 +21,74 @@ const dropdownText = document.getElementById('selected-category-text');
 const dropdownMenu = document.getElementById('custom-options');
 const dropdownOptions = document.querySelectorAll('.option');
 
-// Modal
+// Modal & Theme
 const modal = document.getElementById('modal-overlay');
 const confirmBtn = document.getElementById('confirm-delete-btn');
-
-// Theme Toggles
 const desktopThemeBtn = document.getElementById('desktop-theme-toggle');
 const mobileThemeBtn = document.getElementById('mobile-theme-toggle');
 const html = document.documentElement;
 
 // ==========================================
-// 3. THEME LOGIC (Desktop & Mobile)
+// 3. AI PREDICTION LOGIC (The "Brain")
 // ==========================================
 
+textInput.addEventListener('input', () => {
+    const text = textInput.value;
+    
+    // Clear previous timer (Debounce)
+    clearTimeout(debounceTimer);
+
+    // If text is short, don't bother
+    if (text.length < 3) return;
+
+    // Wait 500ms after user stops typing
+    debounceTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`${API_URL}/predict`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                const predictedCategory = data.category;
+                
+                // Only auto-select if user hasn't manually picked one yet (optional)
+                // Or just always update it for the "Magic" feel
+                selectCategory(predictedCategory);
+            }
+        } catch (err) {
+            console.error("AI Prediction Failed:", err);
+        }
+    }, 500); 
+});
+
+// Helper to update the Custom Dropdown programmatically
+function selectCategory(catName) {
+    // Find the option element with this value
+    const option = document.querySelector(`.option[data-value="${catName}"]`);
+    if (option) {
+        // Update Hidden Input
+        categoryInput.value = catName;
+        // Update Visual Text & Icon
+        dropdownText.innerHTML = option.innerHTML;
+        dropdownText.style.color = "var(--text-primary)";
+        
+        // Visual Feedback (Flash the dropdown)
+        dropdownTrigger.style.borderColor = "#6366F1";
+        setTimeout(() => {
+            dropdownTrigger.style.borderColor = "transparent";
+        }, 300);
+    }
+}
+
+// ==========================================
+// 4. THEME LOGIC
+// ==========================================
 function toggleTheme() {
     const current = html.getAttribute('data-theme');
     const next = current === 'dark' ? 'light' : 'dark';
-    
     html.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
     updateThemeUI(next);
@@ -47,36 +96,26 @@ function toggleTheme() {
 
 function updateThemeUI(theme) {
     const iconClass = theme === 'dark' ? 'ph-fill ph-moon' : 'ph-fill ph-sun';
-    
-    // Update Desktop Sidebar
     if(document.getElementById('theme-text')) {
         document.getElementById('theme-text').innerText = theme === 'dark' ? 'Dark Mode' : 'Light Mode';
         document.querySelector('#desktop-theme-toggle i').className = iconClass;
     }
-
-    // Update Mobile Header
-    if(mobileThemeBtn) {
-        mobileThemeBtn.querySelector('i').className = iconClass;
-    }
+    if(mobileThemeBtn) mobileThemeBtn.querySelector('i').className = iconClass;
 }
 
-// Initialize Theme
 const savedTheme = localStorage.getItem('theme') || 'dark';
 html.setAttribute('data-theme', savedTheme);
 updateThemeUI(savedTheme);
 
-// Event Listeners
 if (desktopThemeBtn) desktopThemeBtn.addEventListener('click', toggleTheme);
 if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', toggleTheme);
 
-// Set Date
-const dateOptions = { weekday: 'long', month: 'long', day: 'numeric' };
-document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', dateOptions);
+// Date
+document.getElementById('current-date').innerText = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
 // ==========================================
-// 4. CUSTOM DROPDOWN LOGIC
+// 5. DROPDOWN INTERACTION
 // ==========================================
-
 dropdownTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
     dropdownMenu.classList.toggle('hidden');
@@ -85,9 +124,7 @@ dropdownTrigger.addEventListener('click', (e) => {
 dropdownOptions.forEach(option => {
     option.addEventListener('click', () => {
         const value = option.getAttribute('data-value');
-        const htmlContent = option.innerHTML;
-
-        dropdownText.innerHTML = htmlContent;
+        dropdownText.innerHTML = option.innerHTML;
         dropdownText.style.color = "var(--text-primary)";
         categoryInput.value = value;
         dropdownMenu.classList.add('hidden');
@@ -101,43 +138,15 @@ document.addEventListener('click', (e) => {
 });
 
 // ==========================================
-// 5. MODAL LOGIC
+// 6. API & UI LOGIC
 // ==========================================
-
-function showModal(id) {
-    transactionToDelete = id;
-    modal.classList.remove('hidden');
-}
-
-function closeModal() {
-    transactionToDelete = null;
-    modal.classList.add('hidden');
-}
-
-confirmBtn.addEventListener('click', async () => {
-    if (transactionToDelete) {
-        await deleteTransaction(transactionToDelete);
-        closeModal();
-    }
-});
-
-modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-});
-
-// ==========================================
-// 6. API OPERATIONS
-// ==========================================
-
 async function getData() {
     try {
-        const res = await fetch(API_URL);
+        const res = await fetch(`${API_URL}/transactions`);
         const data = await res.json();
         transactions = data;
         updateUI();
-    } catch (err) {
-        console.error("Error fetching data:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 async function addTransaction(e) {
@@ -146,36 +155,23 @@ async function addTransaction(e) {
     const amountVal = amountInput.value;
     const categoryVal = categoryInput.value;
 
-    if (text.trim() === '' || amountVal.trim() === '' || categoryVal === '') {
-        alert("Please fill in all fields"); 
-        return;
-    }
+    if (!text || !amountVal || !categoryVal) { alert("Please fill in all fields"); return; }
 
     let finalAmount = Math.abs(Number(amountVal));
-    if (categoryVal !== 'Income') finalAmount = finalAmount * -1;
-
-    const newTx = {
-        text: text,
-        amount: finalAmount,
-        category: categoryVal,
-        date: new Date().toLocaleDateString()
-    };
+    if (categoryVal !== 'Income') finalAmount *= -1;
 
     try {
-        const res = await fetch(API_URL, {
+        const res = await fetch(`${API_URL}/transactions`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newTx)
+            body: JSON.stringify({ text, amount: finalAmount, category: categoryVal, date: new Date().toLocaleDateString() })
         });
-
         if (res.ok) {
             const saved = await res.json();
             transactions.push(saved);
             updateUI();
-            textInput.value = '';
-            amountInput.value = '';
-            categoryInput.value = '';
-            dropdownText.innerText = 'Select Category';
+            textInput.value = ''; amountInput.value = ''; 
+            categoryInput.value = ''; dropdownText.innerText = 'Select Category';
             dropdownText.style.color = "var(--text-secondary)";
         }
     } catch (err) { console.error(err); }
@@ -183,15 +179,11 @@ async function addTransaction(e) {
 
 async function deleteTransaction(id) {
     try {
-        await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+        await fetch(`${API_URL}/transactions/${id}`, { method: 'DELETE' });
         transactions = transactions.filter(t => t.id !== id);
         updateUI();
     } catch (err) { console.error(err); }
 }
-
-// ==========================================
-// 7. UI RENDERING
-// ==========================================
 
 function updateUI() {
     const amounts = transactions.map(t => t.amount);
@@ -205,78 +197,55 @@ function updateUI() {
 
     const list = document.getElementById('transaction-list');
     list.innerHTML = '';
-
     transactions.slice().reverse().slice(0, 10).forEach(t => {
         const el = document.createElement('div');
         el.className = 't-item';
         el.innerHTML = `
             <div class="t-left">
                 <div class="t-icon"><i class="ph-light ${getIcon(t.category)}"></i></div>
-                <div class="t-info">
-                    <h4>${t.text}</h4>
-                    <p>${t.category} • ${t.date}</p>
-                </div>
+                <div class="t-info"><h4>${t.text}</h4><p>${t.category} • ${t.date}</p></div>
             </div>
             <div class="t-right" style="display:flex; align-items:center; gap:12px;">
-                <span class="t-amount ${t.amount > 0 ? 'positive' : ''}">
-                    ${t.amount > 0 ? '+' : ''}${formatMoney(Math.abs(t.amount))}
-                </span>
+                <span class="t-amount ${t.amount > 0 ? 'positive' : ''}">${formatMoney(t.amount, true)}</span>
                 <button class="delete-btn" onclick="showModal(${t.id})"><i class="ph-fill ph-trash"></i></button>
-            </div>
-        `;
+            </div>`;
         list.appendChild(el);
     });
     renderChart();
 }
 
-function formatMoney(num, sign = false) {
-    return (sign ? (num < 0 ? '-' : '+') : '') + '$' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
-}
-
-function getIcon(cat) {
-    const map = {
-        'Food': 'ph-hamburger', 'Transport': 'ph-car', 'Shopping': 'ph-bag',
-        'Entertainment': 'ph-game-controller', 'Health': 'ph-heartbeat',
-        'Utilities': 'ph-lightning', 'Income': 'ph-money', 'General': 'ph-tag'
-    };
-    return map[cat] || 'ph-tag';
-}
+// Helpers
+const formatMoney = (num, sign = false) => (sign && num > 0 ? '+' : '') + '$' + Number(num).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+const getIcon = (cat) => ({'Food':'ph-hamburger','Transport':'ph-car','Shopping':'ph-bag','Entertainment':'ph-game-controller','Health':'ph-heartbeat','Utilities':'ph-lightning','Income':'ph-money'}[cat] || 'ph-tag');
 
 function renderChart() {
     const ctx = document.getElementById('expenseChart').getContext('2d');
     const expenses = transactions.filter(t => t.amount < 0);
     const categories = {};
-    expenses.forEach(t => {
-        const cat = t.category;
-        categories[cat] = (categories[cat] || 0) + Math.abs(t.amount);
-    });
-
+    expenses.forEach(t => { categories[t.category] = (categories[t.category] || 0) + Math.abs(t.amount); });
+    
     if (myChart) myChart.destroy();
-
     const isDark = html.getAttribute('data-theme') === 'dark';
-    const textColor = isDark ? '#A1A1AA' : '#64748B';
-
+    
     myChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: Object.keys(categories),
-            datasets: [{
-                data: Object.values(categories),
-                backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b', '#3b82f6'],
-                borderWidth: 0,
-                hoverOffset: 6
-            }]
+            datasets: [{ data: Object.values(categories), backgroundColor: ['#6366f1', '#a855f7', '#ec4899', '#10b981', '#f59e0b', '#3b82f6'], borderWidth: 0, hoverOffset: 6 }]
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: {
-                legend: { position: 'right', labels: { color: textColor, font: { family: 'Outfit', size: 11 }, boxWidth: 10, padding: 15 } }
-            },
+            plugins: { legend: { position: 'right', labels: { color: isDark ? '#A1A1AA' : '#64748B', font: { family: 'Outfit', size: 11 }, boxWidth: 10, padding: 15 } } },
             cutout: '75%', animation: { animateScale: true, animateRotate: true }
         }
     });
 }
 
-// Start
+// Modal
+function showModal(id) { transactionToDelete = id; modal.classList.remove('hidden'); }
+function closeModal() { transactionToDelete = null; modal.classList.add('hidden'); }
+confirmBtn.addEventListener('click', async () => { if(transactionToDelete) { await deleteTransaction(transactionToDelete); closeModal(); }});
+modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
 form.addEventListener('submit', addTransaction);
 getData();
